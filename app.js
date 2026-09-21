@@ -18,12 +18,10 @@ const familyFilter = document.getElementById('family-filter');
 const statusFilter = document.getElementById('status-filter');
 const sortSelect = document.getElementById('sort-select');
 
-// Modal Elements
 const formModal = document.getElementById('form-modal');
 const detailModal = document.getElementById('detail-modal');
 const scentForm = document.getElementById('scent-form');
 
-// Initialize App
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
   setupEventListeners();
@@ -33,7 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadData() {
   const stored = localStorage.getItem('scent_map_data');
   if (stored) {
-    try { fragrances = JSON.parse(stored); } catch (e) { fragrances = [...SAMPLE_DATA]; }
+    try { 
+      fragrances = JSON.parse(stored); 
+      if (!Array.isArray(fragrances)) throw new Error();
+    } catch (e) { 
+      fragrances = [...SAMPLE_DATA]; 
+    }
   } else {
     fragrances = [...SAMPLE_DATA];
     saveData();
@@ -70,6 +73,13 @@ function render() {
 
   if (filtered.length === 0) {
     emptyState.classList.remove('hidden');
+    if (fragrances.length === 0) {
+      document.getElementById('empty-title').textContent = "Your Collection is Empty";
+      document.getElementById('empty-message').textContent = "Start adding your favorite fragrances or restore default sample data.";
+    } else {
+      document.getElementById('empty-title').textContent = "No Scents Found";
+      document.getElementById('empty-message').textContent = "Try adjusting your filters or search terms.";
+    }
   } else {
     emptyState.classList.add('hidden');
     filtered.forEach(f => grid.appendChild(createCard(f)));
@@ -77,10 +87,10 @@ function render() {
 }
 
 function createCard(f) {
-  const card = document.createElement('div');
+  const card = document.createElement('article');
   card.className = 'card';
-  card.onclick = () => openDetail(f.id);
-
+  card.tabIndex = 0;
+  
   const noses = '👃'.repeat(f.rating);
   const statusClass = f.status === 'Own It' ? 'own' : (f.status === 'Want It' ? 'want' : '');
 
@@ -88,16 +98,29 @@ function createCard(f) {
     <div>
       <div class="card-header">
         <span class="card-title">${escapeHtml(f.name)}</span>
-        <span class="badge" style="${getFamilyStyle(f.family)}">${f.family}</span>
+        <button type="button" class="badge click-badge" style="${getFamilyStyle(f.family)}" aria-label="Filter by ${f.family}">${f.family}</button>
       </div>
       <div class="card-brand">${escapeHtml(f.brand)}</div>
       <p class="card-notes">${escapeHtml(f.notes || 'No tasting notes added.')}</p>
     </div>
     <div class="card-footer">
-      <span class="rating-noses">${noses}</span>
+      <span class="rating-noses" aria-label="${f.rating} out of 5 noses">${noses}</span>
       <span class="badge-status ${statusClass}">${f.status}</span>
     </div>
   `;
+
+  // Quick Filter Klik Badge Family
+  const familyBadge = card.querySelector('.click-badge');
+  familyBadge.onclick = (e) => {
+    e.stopPropagation();
+    familyFilter.value = f.family;
+    render();
+    showToast(`Filtered by family: ${f.family}`);
+  };
+
+  card.onclick = () => openDetail(f.id);
+  card.onkeydown = (e) => { if (e.key === 'Enter') openDetail(f.id); };
+
   return card;
 }
 
@@ -109,7 +132,7 @@ function updateSummary() {
 
 function getFamilyStyle(family) {
   const key = family.toLowerCase();
-  return `background-color: var(--fam-${key}); color: var(--fam-${key}-t);`;
+  return `background-color: var(--fam-${key}); color: var(--fam-${key}-t); border: none; cursor: pointer;`;
 }
 
 function setupEventListeners() {
@@ -123,6 +146,14 @@ function setupEventListeners() {
   document.getElementById('cancel-form').onclick = closeForm;
   document.getElementById('close-detail').onclick = () => detailModal.classList.add('hidden');
 
+  // Keyboard Escape Handler for Accessibility
+  window.onkeydown = (e) => {
+    if (e.key === 'Escape') {
+      closeForm();
+      detailModal.classList.add('hidden');
+    }
+  };
+
   setupRatingPicker();
 
   scentForm.onsubmit = (e) => {
@@ -134,7 +165,10 @@ function setupEventListeners() {
     const status = document.getElementById('scent-status').value;
     const notes = document.getElementById('scent-notes').value.trim();
 
-    if (!name || !brand) return;
+    if (!name || !brand) {
+      showToast('Name and Brand are required!');
+      return;
+    }
 
     if (id) {
       const idx = fragrances.findIndex(f => f.id === id);
@@ -160,7 +194,7 @@ function setupEventListeners() {
   };
 
   document.getElementById('delete-entry-btn').onclick = () => {
-    if (confirm('Delete this fragrance log?')) {
+    if (confirm('Delete this fragrance log permanently?')) {
       fragrances = fragrances.filter(f => f.id !== activeDetailId);
       saveData();
       detailModal.classList.add('hidden');
@@ -175,8 +209,21 @@ function setupEventListeners() {
     if (f) openForm(f);
   };
 
+  // Quick Status Toggle dari Detail Panel
+  document.getElementById('quick-status-btn').onclick = () => {
+    const f = fragrances.find(item => item.id === activeDetailId);
+    if (!f) return;
+    const statuses = ['Tried', 'Own It', 'Want It'];
+    const nextIndex = (statuses.indexOf(f.status) + 1) % statuses.length;
+    f.status = statuses[nextIndex];
+    saveData();
+    openDetail(f.id);
+    render();
+    showToast(`Status changed to: ${f.status}`);
+  };
+
   const restoreDataHandler = () => {
-    if (confirm('Restore sample collection? Custom changes will be reset.')) {
+    if (confirm('Restore sample collection? Your custom entries will be reset.')) {
       fragrances = [...SAMPLE_DATA];
       saveData();
       render();
