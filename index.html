@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scent Map — Fragrance Discovery Log</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="logo-icon">✨</span>
+        <div>
+          <h1>Scent Map</h1>
+          <p class="subtitle">Personal Fragrance Discovery Log</p>
+        </div>
+      </div>
+      <button id="add-btn" class="btn btn-primary">+ Add Fragrance</button>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Summary Strip -->
+    <section class="summary-strip">
+      <div class="summary-card">
+        <span class="summary-value" id="stat-total">0</span>
+        <span class="summary-label">Total Entries</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value" id="stat-owned">0</span>
+        <span class="summary-label">Owned</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value" id="stat-want">0</span>
+        <span class="summary-label">Wishlist</span>
+      </div>
+    </section>
+
+    <!-- Controls Bar -->
+    <section class="controls-bar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search by name or brand..." />
+      </div>
+      <div class="filter-group">
+        <select id="family-filter">
+          <option value="All">All Families</option>
+          <option value="Floral">Floral</option>
+          <option value="Woody">Woody</option>
+          <option value="Citrus">Citrus</option>
+          <option value="Oriental">Oriental</option>
+          <option value="Fresh">Fresh</option>
+          <option value="Gourmand">Gourmand</option>
+          <option value="Aromatic">Aromatic</option>
+          <option value="Spicy">Spicy</option>
+        </select>
+
+        <select id="status-filter">
+          <option value="All">All Statuses</option>
+          <option value="Tried">Tried</option>
+          <option value="Own It">Own It</option>
+          <option value="Want It">Want It</option>
+        </select>
+
+        <select id="sort-select">
+          <option value="newest">Newest First</option>
+          <option value="rating-desc">Rating: High to Low</option>
+          <option value="name-asc">Name: A to Z</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Fragrance Grid -->
+    <section id="scent-grid" class="scent-grid"></section>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="empty-state hidden">
+      <div class="empty-icon">👃</div>
+      <h3 id="empty-title">No Scents Found</h3>
+      <p id="empty-message">Try adjusting your filters or search terms.</p>
+      <button id="reset-data-btn" class="btn btn-secondary">Restore Sample Collection</button>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <p>Scent Map &copy; Fragrance Discovery Log</p>
+    <button id="footer-reset-btn" class="btn-link">Reset to Sample Data</button>
+  </footer>
+
+  <!-- Modal Form (Add / Edit) -->
+  <div id="form-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Fragrance</h2>
+        <button class="close-btn" id="close-modal">&times;</button>
+      </div>
+      <form id="scent-form">
+        <input type="hidden" id="entry-id" />
+        
+        <div class="form-group">
+          <label for="scent-name">Fragrance Name *</label>
+          <input type="text" id="scent-name" required placeholder="e.g. Baccarat Rouge 540" />
+        </div>
+
+        <div class="form-group">
+          <label for="scent-brand">Brand / House *</label>
+          <input type="text" id="scent-brand" required placeholder="e.g. Maison Francis Kurkdjian" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="scent-family">Scent Family</label>
+            <select id="scent-family">
+              <option value="Floral">Floral</option>
+              <option value="Woody">Woody</option>
+              <option value="Citrus">Citrus</option>
+              <option value="Oriental">Oriental</option>
+              <option value="Fresh">Fresh</option>
+              <option value="Gourmand">Gourmand</option>
+              <option value="Aromatic">Aromatic</option>
+              <option value="Spicy">Spicy</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="scent-status">Status</label>
+            <select id="scent-status">
+              <option value="Tried">Tried</option>
+              <option value="Own It">Own It</option>
+              <option value="Want It">Want It</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="scent-rating">Nose Rating (1–5)</label>
+          <div class="rating-input-group" id="rating-picker">
+            <span data-value="1">👃</span>
+            <span data-value="2">👃</span>
+            <span data-value="3">👃</span>
+            <span data-value="4">👃</span>
+            <span data-value="5">👃</span>
+          </div>
+          <input type="hidden" id="scent-rating" value="5" />
+        </div>
+
+        <div class="form-group">
+          <label for="scent-notes">Tasting Notes / Description</label>
+          <textarea id="scent-notes" rows="3" placeholder="Saffron, amberwood, cedar, subtle sweetness..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="cancel-form">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Fragrance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detail Panel Modal -->
+  <div id="detail-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content detail-content">
+      <div class="modal-header">
+        <span id="detail-family" class="badge">Family</span>
+        <button class="close-btn" id="close-detail">&times;</button>
+      </div>
+      <div class="detail-body">
+        <h2 id="detail-name">Fragrance Name</h2>
+        <h4 id="detail-brand">Brand Name</h4>
+        <div class="detail-meta">
+          <div class="rating-display" id="detail-rating"></div>
+          <span id="detail-status" class="badge-status">Status</span>
+        </div>
+        <p class="detail-notes-label">Tasting Notes</p>
+        <p id="detail-notes" class="detail-notes"></p>
+      </div>
+      <div class="modal-actions space-between">
+        <button id="delete-entry-btn" class="btn btn-danger">Delete</button>
+        <div>
+          <button id="edit-entry-btn" class="btn btn-secondary">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden">Action performed</div>
+  <script src="app.js"></script>
+</body>
+</html>
