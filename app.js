@@ -1,3 +1,4 @@
+// Sample Seed Data (Diurai otomatis jika LocalStorage kosong)
 const SAMPLE_DATA = [
   { id: '1', name: 'Baccarat Rouge 540', brand: 'Maison Francis Kurkdjian', family: 'Oriental', rating: 5, status: 'Own It', notes: 'Warm saffron, cedarwood, and sweet ambergris. Iconic projection.', createdAt: 1 },
   { id: '2', name: 'Santal 33', brand: 'Le Labo', family: 'Woody', rating: 4, status: 'Tried', notes: 'Smoky papyrus, violet, leather, and creamy sandalwood.', createdAt: 2 },
@@ -18,13 +19,17 @@ const familyFilter = document.getElementById('family-filter');
 const statusFilter = document.getElementById('status-filter');
 const sortSelect = document.getElementById('sort-select');
 
+// Modals
 const formModal = document.getElementById('form-modal');
 const detailModal = document.getElementById('detail-modal');
+const confirmModal = document.getElementById('confirm-modal');
 const scentForm = document.getElementById('scent-form');
 
+// Application Initialization
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
   setupEventListeners();
+  initBackgroundCanvas();
   render();
 });
 
@@ -109,7 +114,7 @@ function createCard(f) {
     </div>
   `;
 
-  // Quick Filter Klik Badge Family
+  // Quick-Filter pada Badge Scent Family
   const familyBadge = card.querySelector('.click-badge');
   familyBadge.onclick = (e) => {
     e.stopPropagation();
@@ -146,16 +151,18 @@ function setupEventListeners() {
   document.getElementById('cancel-form').onclick = closeForm;
   document.getElementById('close-detail').onclick = () => detailModal.classList.add('hidden');
 
-  // Keyboard Escape Handler for Accessibility
+  // Global Keyboard Handler (Accessibility)
   window.onkeydown = (e) => {
     if (e.key === 'Escape') {
       closeForm();
       detailModal.classList.add('hidden');
+      confirmModal.classList.add('hidden');
     }
   };
 
   setupRatingPicker();
 
+  // Handle Form Submit
   scentForm.onsubmit = (e) => {
     e.preventDefault();
     const id = document.getElementById('entry-id').value;
@@ -193,42 +200,55 @@ function setupEventListeners() {
     render();
   };
 
+  // Custom Delete Handlers (Bebas dari confirm bawaan browser)
   document.getElementById('delete-entry-btn').onclick = () => {
-    if (confirm('Delete this fragrance log permanently?')) {
+    confirmModal.classList.remove('hidden');
+  };
+
+  document.getElementById('cancel-delete-btn').onclick = () => {
+    confirmModal.classList.add('hidden');
+  };
+
+  document.getElementById('confirm-delete-btn').onclick = () => {
+    if (activeDetailId) {
       fragrances = fragrances.filter(f => f.id !== activeDetailId);
       saveData();
+      confirmModal.classList.add('hidden');
       detailModal.classList.add('hidden');
       render();
       showToast('Fragrance deleted.');
     }
   };
 
+  // Edit Button Action
   document.getElementById('edit-entry-btn').onclick = () => {
     const f = fragrances.find(item => item.id === activeDetailId);
     detailModal.classList.add('hidden');
     if (f) openForm(f);
   };
 
-  // Quick Status Toggle dari Detail Panel
-  document.getElementById('quick-status-btn').onclick = () => {
-    const f = fragrances.find(item => item.id === activeDetailId);
-    if (!f) return;
-    const statuses = ['Tried', 'Own It', 'Want It'];
-    const nextIndex = (statuses.indexOf(f.status) + 1) % statuses.length;
-    f.status = statuses[nextIndex];
-    saveData();
-    openDetail(f.id);
-    render();
-    showToast(`Status changed to: ${f.status}`);
-  };
-
-  const restoreDataHandler = () => {
-    if (confirm('Restore sample collection? Your custom entries will be reset.')) {
-      fragrances = [...SAMPLE_DATA];
+  // Quick Status Toggle Button
+  const quickStatusBtn = document.getElementById('quick-status-btn');
+  if (quickStatusBtn) {
+    quickStatusBtn.onclick = () => {
+      const f = fragrances.find(item => item.id === activeDetailId);
+      if (!f) return;
+      const statuses = ['Tried', 'Own It', 'Want It'];
+      const nextIndex = (statuses.indexOf(f.status) + 1) % statuses.length;
+      f.status = statuses[nextIndex];
       saveData();
+      openDetail(f.id);
       render();
-      showToast('Sample collection restored!');
-    }
+      showToast(`Status changed to: ${f.status}`);
+    };
+  }
+
+  // Restore Sample Data Actions
+  const restoreDataHandler = () => {
+    fragrances = [...SAMPLE_DATA];
+    saveData();
+    render();
+    showToast('Sample collection restored!');
   };
 
   document.getElementById('reset-data-btn').onclick = restoreDataHandler;
@@ -306,4 +326,43 @@ function showToast(msg) {
 
 function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Lightweight Floating Scent Particles Animation
+function initBackgroundCanvas() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  for (let i = 0; i < 25; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 2 + 1,
+      speedY: Math.random() * 0.4 + 0.1,
+      opacity: Math.random() * 0.4 + 0.1
+    });
+  }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(197, 160, 89, ${p.opacity})`;
+      ctx.fill();
+      p.y -= p.speedY;
+      if (p.y < 0) p.y = canvas.height;
+    });
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
 }
